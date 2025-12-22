@@ -1,0 +1,25 @@
+# Qt编译目录
+build*/
+build-*/
+ECHO 处于打开状态。
+# Qt用户设置
+*.user
+*.pro.user*
+ECHO 处于打开状态。
+# 编译生成的文件
+*.exe
+*.o
+*.obj
+*.dll
+ECHO 处于打开状态。
+# Makefile
+Makefile*
+ECHO 处于打开状态。
+# Qt自动生成的文件
+moc_*.cpp
+ui_*.h
+*.moc
+ECHO 处于打开状态。
+# 调试文件
+debug/
+release/
