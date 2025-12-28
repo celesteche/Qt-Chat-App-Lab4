@@ -26,6 +26,13 @@ void ServerWorker::setUserName(QString user)
     m_userName = user;
 }
 
+void ServerWorker::disconnectFromClient()
+{
+    if (m_serverSocket->state() == QAbstractSocket::ConnectedState) {
+        m_serverSocket->disconnectFromHost();
+    }
+}
+
 void ServerWorker::onReadyRead()
 {
     QByteArray jsonData;
