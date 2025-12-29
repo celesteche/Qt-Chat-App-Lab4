@@ -1,5 +1,6 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
+#include <QListWidgetItem>
 
 #include <QMainWindow>
 #include "chatclient.h"
@@ -27,6 +28,9 @@ private slots:
     void on_privateChatButton_clicked();
     void on_backButton_clicked();
     void on_privateSendButton_clicked();
+
+    // 用户选择功能
+    void on_privateUserListWidget_itemDoubleClicked(QListWidgetItem *item);
 
     // 已有的函数
     void connectedToServer();
