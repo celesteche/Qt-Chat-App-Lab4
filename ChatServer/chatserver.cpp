@@ -108,7 +108,6 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
         message["sender"] = sender->userName();
         message["timestamp"] = QDateTime::currentDateTime().toString("hh:mm:ss");
 
-        // 修改这里：广播给所有人，包括发送者自己（改为nullptr）
         broadcast(message, nullptr);
 
         // 记录消息到日志
@@ -124,7 +123,6 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
         connectedMessage["type"] = "newuser";
         connectedMessage["username"] = usernameVal.toString();
 
-        // 修改这里：广播给所有人，包括新登录用户自己（改为nullptr）
         broadcast(connectedMessage, sender);
 
         //send user list to new logined user

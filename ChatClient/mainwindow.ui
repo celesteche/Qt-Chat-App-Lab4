@@ -244,7 +244,7 @@
       </item>
      </layout>
     </widget>
-    <widget class="QWidget" name="page">
+    <widget class="QWidget" name="privateChatPage">
      <widget class="QWidget" name="verticalLayoutWidget">
       <property name="geometry">
        <rect>
