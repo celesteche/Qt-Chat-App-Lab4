@@ -3,6 +3,7 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 
+
 ChatClient::ChatClient(QObject *parent)
     : QObject{parent}
 {

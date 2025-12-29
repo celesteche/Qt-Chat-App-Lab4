@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include "chatclient.h"
 
+
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -31,6 +32,12 @@ private slots:
     void userJoined(const QString &user);
     void userLeft(const QString &user);
     void userlistReceived(const QStringList &list);
+
+    void on_privateChatButton_clicked();
+
+    void on_backButton_clicked();
+
+    void on_privateSendButton_clicked();
 
 private:
     Ui::MainWindow *ui;

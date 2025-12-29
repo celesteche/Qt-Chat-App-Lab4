@@ -113,3 +113,21 @@ void MainWindow::userlistReceived(const QStringList &list)
     ui->userListWidget->addItems(list);
 }
 
+
+void MainWindow::on_privateChatButton_clicked()
+{
+
+}
+
+
+void MainWindow::on_backButton_clicked()
+{
+
+}
+
+
+void MainWindow::on_privateSendButton_clicked()
+{
+
+}
+
