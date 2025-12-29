@@ -120,15 +120,18 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
         // 私聊消息处理
         const QJsonValue textVal = docObj.value("text");
         const QJsonValue receiverVal = docObj.value("receiver");
+        const QJsonValue senderVal = docObj.value("sender");  // 添加sender字段检查
 
         if (textVal.isNull() || !textVal.isString() ||
-            receiverVal.isNull() || !receiverVal.isString())
+            receiverVal.isNull() || !receiverVal.isString() ||
+            senderVal.isNull() || !senderVal.isString())
             return;
 
         const QString text = textVal.toString().trimmed();
         const QString receiver = receiverVal.toString();
+        const QString senderName = senderVal.toString();  // 获取发送者名称
 
-        if (text.isEmpty() || receiver.isEmpty())
+        if (text.isEmpty() || receiver.isEmpty() || senderName.isEmpty())
             return;
 
         // 查找接收者
@@ -159,13 +162,12 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
         }
 
         // 构建私聊消息
-        QJsonObject privateMessage = docObj;
-        // 确保发送者信息正确
-        privateMessage["sender"] = sender->userName();
-        // 确保有时间戳
-        if (!privateMessage.contains("timestamp")) {
-            privateMessage["timestamp"] = QDateTime::currentDateTime().toString("hh:mm:ss");
-        }
+        QJsonObject privateMessage;
+        privateMessage["type"] = "private";
+        privateMessage["text"] = text;
+        privateMessage["sender"] = senderName;      // 使用从消息中获取的发送者名称
+        privateMessage["receiver"] = receiver;
+        privateMessage["timestamp"] = QDateTime::currentDateTime().toString("hh:mm:ss");
 
         // 发送给接收者
         receiverWorker->sendJson(privateMessage);
@@ -175,7 +177,7 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
 
         // 记录日志
         emit logMessage(QString("私聊消息: %1 -> %2 : %3")
-                            .arg(sender->userName())
+                            .arg(senderName)
                             .arg(receiver)
                             .arg(text));
 
@@ -191,14 +193,17 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
         connectedMessage["username"] = sender->userName();
 
         // 广播给所有人，包括新登录用户自己
-        broadcast(connectedMessage, sender);
+        broadcast(connectedMessage, sender);  // 注意：这里改为nullptr，让新用户也能看到自己登录的提示
 
-        //send user list to new logined user
+        // send user list to new logined user
         QJsonObject userListMessage;
         userListMessage["type"] = "userlist";
         QJsonArray userlist;
         for (ServerWorker *worker : m_clients) {
-            userlist.append(worker->userName());  // 所有用户都一样显示
+            if (worker == sender)
+                userlist.append(worker->userName() + "（当前用户）");
+            else
+                userlist.append(worker->userName());
         }
         userListMessage["userlist"] = userlist;
         sender->sendJson(userListMessage);

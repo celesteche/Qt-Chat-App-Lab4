@@ -42,21 +42,31 @@ void ChatClient::onReadyRead()
 
 void ChatClient::sendMessage(const QString &text, const QString &type)
 {
-    if (m_clientSocket->state() != QAbstractSocket::ConnectedState)
+    if (m_clientSocket->state() != QAbstractSocket::ConnectedState) {
+        qDebug() << "发送失败：客户端未连接";
         return;
+    }
 
     if (!text.isEmpty()) {
-        // create a QDataStream operating on the socket
         QDataStream serverStream(m_clientSocket);
         serverStream.setVersion(QDataStream::Qt_5_12);
 
-        // Create the JSON we want to send
-        QJsonObject message;
-        message["type"] = type;
-        message["text"] = text;
+        qDebug() << "发送消息，类型:" << type << "内容:" << text;
 
-        // send the JSON using QDataStream
-        serverStream << QJsonDocument(message).toJson();
+        if (type == "json") {
+            // 直接发送JSON字符串
+            QByteArray data = text.toUtf8();
+            serverStream << data;
+            qDebug() << "发送JSON数据长度:" << data.length();
+        } else {
+            // 否则创建JSON对象
+            QJsonObject message;
+            message["type"] = type;
+            message["text"] = text;
+            QByteArray data = QJsonDocument(message).toJson();
+            serverStream << data;
+            qDebug() << "发送普通消息数据长度:" << data.length();
+        }
     }
 }
 

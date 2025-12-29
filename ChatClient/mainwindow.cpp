@@ -128,14 +128,21 @@ void MainWindow::on_privateSendButton_clicked()
 {
     QString text = ui->privateSayLineEdit->text().trimmed();
     if (text.isEmpty()) {
+        qDebug() << "私聊消息内容为空";
         return;
     }
 
     if (m_privateChatTarget.isEmpty()) {
+        qDebug() << "私聊对象为空";
         QMessageBox::warning(this, "提示", "请先双击选择要私聊的用户");
         ui->privateSayLineEdit->clear();
         return;
     }
+
+    qDebug() << "准备发送私聊消息:";
+    qDebug() << "发送者:" << m_currentUserName;
+    qDebug() << "接收者:" << m_privateChatTarget;
+    qDebug() << "内容:" << text;
 
     // 在本地显示自己发送的私聊消息
     QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
@@ -153,6 +160,8 @@ void MainWindow::on_privateSendButton_clicked()
     // 将JSON对象转换为字符串发送
     QJsonDocument doc(privateMessage);
     QString jsonString = QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+
+    qDebug() << "发送的JSON:" << jsonString;
 
     // 发送私聊消息
     m_chatClient->sendMessage(jsonString, "json");
