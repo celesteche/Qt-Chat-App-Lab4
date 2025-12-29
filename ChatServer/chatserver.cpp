@@ -88,6 +88,7 @@ void ChatServer::stopServer()
     emit logMessage("服务器已停止");
 }
 
+// 在 jsonReceived 函数中添加私聊消息处理
 void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
 {
     const QJsonValue typeVal = docObj.value("type");
@@ -95,6 +96,7 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
         return;
 
     if (typeVal.toString().compare("message", Qt::CaseInsensitive) == 0) {
+        // 公共消息处理（原有代码）
         const QJsonValue textVal = docObj.value("text");
         if (textVal.isNull() || !textVal.isString())
             return;
@@ -108,12 +110,77 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
         message["sender"] = sender->userName();
         message["timestamp"] = QDateTime::currentDateTime().toString("hh:mm:ss");
 
+        // 广播给所有人，包括发送者自己
         broadcast(message, nullptr);
 
         // 记录消息到日志
-        emit logMessage(QString("消息广播: %1 -> %2").arg(sender->userName()).arg(text));
+        emit logMessage(QString("公共消息: %1 -> %2").arg(sender->userName()).arg(text));
+
+    } else if (typeVal.toString().compare("private", Qt::CaseInsensitive) == 0) {
+        // 私聊消息处理
+        const QJsonValue textVal = docObj.value("text");
+        const QJsonValue receiverVal = docObj.value("receiver");
+
+        if (textVal.isNull() || !textVal.isString() ||
+            receiverVal.isNull() || !receiverVal.isString())
+            return;
+
+        const QString text = textVal.toString().trimmed();
+        const QString receiver = receiverVal.toString();
+
+        if (text.isEmpty() || receiver.isEmpty())
+            return;
+
+        // 查找接收者
+        ServerWorker *receiverWorker = nullptr;
+        for (ServerWorker *worker : m_clients) {
+            if (worker->userName() == receiver) {
+                receiverWorker = worker;
+                break;
+            }
+        }
+
+        if (!receiverWorker) {
+            // 接收者不在线
+            QJsonObject errorMsg;
+            errorMsg["type"] = "error";
+            errorMsg["text"] = QString("用户 %1 不在线").arg(receiver);
+            sender->sendJson(errorMsg);
+            return;
+        }
+
+        if (receiverWorker == sender) {
+            // 不能给自己发私聊
+            QJsonObject errorMsg;
+            errorMsg["type"] = "error";
+            errorMsg["text"] = "不能给自己发私聊消息";
+            sender->sendJson(errorMsg);
+            return;
+        }
+
+        // 构建私聊消息
+        QJsonObject privateMessage = docObj;
+        // 确保发送者信息正确
+        privateMessage["sender"] = sender->userName();
+        // 确保有时间戳
+        if (!privateMessage.contains("timestamp")) {
+            privateMessage["timestamp"] = QDateTime::currentDateTime().toString("hh:mm:ss");
+        }
+
+        // 发送给接收者
+        receiverWorker->sendJson(privateMessage);
+
+        // 同时发送给发送者（让发送者也能看到自己发的消息）
+        sender->sendJson(privateMessage);
+
+        // 记录日志
+        emit logMessage(QString("私聊消息: %1 -> %2 : %3")
+                            .arg(sender->userName())
+                            .arg(receiver)
+                            .arg(text));
 
     } else if (typeVal.toString().compare("login", Qt::CaseInsensitive) == 0) {
+        // 登录处理（原有代码）
         const QJsonValue usernameVal = docObj.value("text");
         if (usernameVal.isNull() || !usernameVal.isString())
             return;
@@ -121,8 +188,9 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
         sender->setUserName(usernameVal.toString());
         QJsonObject connectedMessage;
         connectedMessage["type"] = "newuser";
-        connectedMessage["username"] = usernameVal.toString();
+        connectedMessage["username"] = sender->userName();
 
+        // 广播给所有人，包括新登录用户自己
         broadcast(connectedMessage, sender);
 
         //send user list to new logined user
@@ -130,15 +198,12 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
         userListMessage["type"] = "userlist";
         QJsonArray userlist;
         for (ServerWorker *worker : m_clients) {
-            if (worker == sender)
-                userlist.append(worker->userName() + "**");
-            else
-                userlist.append(worker->userName());
+            userlist.append(worker->userName());  // 所有用户都一样显示
         }
         userListMessage["userlist"] = userlist;
         sender->sendJson(userListMessage);
 
-        emit logMessage(QString("用户登录: %1 (在线用户: %2)").arg(usernameVal.toString()).arg(m_clients.size()));
+        emit logMessage(QString("用户登录: %1 (在线用户: %2)").arg(sender->userName()).arg(m_clients.size()));
     }
 }
 
