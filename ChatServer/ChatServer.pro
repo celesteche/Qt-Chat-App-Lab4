@@ -12,12 +12,14 @@ SOURCES += \
     chatserver.cpp \
     main.cpp \
     mainwindow.cpp \
+    messagestorage.cpp \
     serverworker.cpp \
     threadpool.cpp
 
 HEADERS += \
     chatserver.h \
     mainwindow.h \
+    messagestorage.h \
     serverworker.h \
     threadpool.h
 
