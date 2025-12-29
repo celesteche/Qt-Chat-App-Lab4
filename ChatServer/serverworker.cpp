@@ -2,6 +2,8 @@
 #include <QDataStream>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QHostAddress>
+#include <QDebug>
 
 ServerWorker::ServerWorker(QObject *parent)
     : QObject{parent}
@@ -31,6 +33,19 @@ void ServerWorker::disconnectFromClient()
     if (m_serverSocket->state() == QAbstractSocket::ConnectedState) {
         m_serverSocket->disconnectFromHost();
     }
+}
+
+QString ServerWorker::peerAddress() const
+{
+    if (m_serverSocket) {
+        QString ip = m_serverSocket->peerAddress().toString();
+        // 去掉IPv6的前缀（如果有）
+        if (ip.startsWith("::ffff:")) {
+            ip = ip.mid(7); // 去掉 "::ffff:"
+        }
+        return ip + ":" + QString::number(m_serverSocket->peerPort());
+    }
+    return "Unknown";
 }
 
 void ServerWorker::onReadyRead()
@@ -63,8 +78,10 @@ void ServerWorker::onReadyRead()
 
 void ServerWorker::sendMessage(const QString &text, const QString &type)
 {
-    if (m_serverSocket->state() != QAbstractSocket::ConnectedState)
+    if (m_serverSocket->state() != QAbstractSocket::ConnectedState) {
+        qDebug() << "发送失败：套接字未连接";
         return;
+    }
 
     if (!text.isEmpty()) {
         // create a QDataStream operating on the socket
@@ -76,17 +93,40 @@ void ServerWorker::sendMessage(const QString &text, const QString &type)
         message["type"] = type;
         message["text"] = text;
 
+        qDebug() << "发送消息:" << type << text;
+
         // send the JSON using QDataStream
         serverStream << QJsonDocument(message).toJson();
     }
 }
 
-void ServerWorker::sendJson(const QJsonObject &json)
+bool ServerWorker::sendJson(const QJsonObject &json)
 {
     const QByteArray jsonData = QJsonDocument(json).toJson(QJsonDocument::Compact);
-    emit logMessage(QLatin1String("Sending to ") + userName() + QLatin1String(" - ") + QString::fromUtf8(jsonData));
+    QString jsonStr = QString::fromUtf8(jsonData);
+
+    qDebug() << "准备发送JSON给" << userName() << ":" << jsonStr;
+
+    if (m_serverSocket->state() != QAbstractSocket::ConnectedState) {
+        qDebug() << "发送失败：套接字未连接";
+        emit logMessage(QLatin1String("发送失败给 ") + userName() + QLatin1String(" - 套接字未连接"));
+        return false;
+    }
 
     QDataStream socketStream(m_serverSocket);
     socketStream.setVersion(QDataStream::Qt_5_7);
-    socketStream << jsonData;
+
+    bool result = false;
+    try {
+        socketStream << jsonData;
+        result = true;
+        qDebug() << "发送成功，数据长度:" << jsonData.length();
+        emit logMessage(QLatin1String("成功发送给 ") + userName() + QLatin1String(" - ") + jsonStr);
+    } catch (...) {
+        qDebug() << "发送失败：写入套接字时发生异常";
+        emit logMessage(QLatin1String("发送失败给 ") + userName() + QLatin1String(" - 写入异常"));
+        result = false;
+    }
+
+    return result;
 }

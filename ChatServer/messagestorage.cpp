@@ -2,7 +2,6 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QDebug>
-#include <QCoreApplication>
 
 MessageStorage::MessageStorage(QObject *parent)
     : QObject(parent)
@@ -162,8 +161,7 @@ QString MessageStorage::getTodayDateString() const
     return QDateTime::currentDateTime().toString("yyyy-MM-dd");
 }
 
-QString MessageStorage::formatMessage(const QString &type, const QString &sender,
-                                      const QString &receiver, const QString &message)
+QString MessageStorage::formatMessage(const QString &type, const QString &sender,  const QString &receiver, const QString &message)
 {
     QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
 

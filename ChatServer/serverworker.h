@@ -2,7 +2,7 @@
 #define SERVERWORKER_H
 
 #include <QObject>
-#include<QTcpSocket>
+#include <QTcpSocket>
 
 class ServerWorker : public QObject
 {
@@ -16,6 +16,9 @@ public:
 
     void disconnectFromClient();
 
+    // 新增：获取客户端地址
+    QString peerAddress() const;
+
 signals:
     void logMessage(const QString &msg);
     void jsonReceived(ServerWorker *sender, const QJsonObject &docObj);
@@ -28,7 +31,7 @@ private:
 public slots:
     void onReadyRead();
     void sendMessage(const QString &text, const QString &type = "message");
-    void sendJson(const QJsonObject &json);
+    bool sendJson(const QJsonObject &json);  // 改为返回bool
 };
 
 #endif // SERVERWORKER_H

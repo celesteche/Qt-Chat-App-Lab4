@@ -9,6 +9,8 @@
 #include <QJsonDocument>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QCoreApplication>
+#include <QDir>
 
 class MessageStorage : public QObject
 {

@@ -5,6 +5,7 @@
 #include <QTcpServer>
 #include "serverworker.h"
 #include "threadpool.h"
+#include "messagestorage.h"
 
 class ChatServer : public QTcpServer
 {
@@ -19,6 +20,9 @@ protected:
 
     // 线程池管理器
     ThreadPoolManager* m_threadPool;
+
+    // 消息存储
+    MessageStorage* m_messageStorage;
 
     void broadcast(const QJsonObject &message, ServerWorker *exclude);
 

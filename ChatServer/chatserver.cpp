@@ -4,11 +4,13 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QDateTime>
+#include <QHostAddress>
 
 ChatServer::ChatServer(QObject *parent)
     : QTcpServer{parent}
 {
     m_threadPool = new ThreadPoolManager(this);
+    m_messageStorage = new MessageStorage(this);
 
     // 连接线程池相关的信号槽
     connect(this, &ChatServer::broadcastMessage, this, &ChatServer::onBroadcastMessage);
@@ -25,6 +27,10 @@ ChatServer::~ChatServer()
 
     if (m_threadPool) {
         delete m_threadPool;
+    }
+
+    if (m_messageStorage) {
+        delete m_messageStorage;
     }
 }
 
@@ -113,6 +119,11 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
         // 广播给所有人，包括发送者自己
         broadcast(message, nullptr);
 
+        // 保存到本地存储
+        if (m_messageStorage) {
+            m_messageStorage->savePublicMessage(sender->userName(), text);
+        }
+
         // 记录消息到日志
         emit logMessage(QString("公共消息: %1 -> %2").arg(sender->userName()).arg(text));
 
@@ -175,6 +186,11 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
         // 同时发送给发送者（让发送者也能看到自己发的消息）
         sender->sendJson(privateMessage);
 
+        // 保存到本地存储
+        if (m_messageStorage) {
+            m_messageStorage->savePrivateMessage(senderName, receiver, text);
+        }
+
         // 记录日志
         emit logMessage(QString("私聊消息: %1 -> %2 : %3")
                             .arg(senderName)
@@ -188,12 +204,19 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
             return;
 
         sender->setUserName(usernameVal.toString());
+
+        // 保存登录日志
+        if (m_messageStorage) {
+            QString clientAddress = sender->peerAddress().toString();
+            m_messageStorage->saveLoginLog(sender->userName(), clientAddress, true);
+        }
+
         QJsonObject connectedMessage;
         connectedMessage["type"] = "newuser";
         connectedMessage["username"] = sender->userName();
 
         // 广播给所有人，包括新登录用户自己
-        broadcast(connectedMessage, sender);  // 注意：这里改为nullptr，让新用户也能看到自己登录的提示
+        broadcast(connectedMessage, nullptr);
 
         // send user list to new logined user
         QJsonObject userListMessage;
@@ -214,6 +237,12 @@ void ChatServer::jsonReceived(ServerWorker *sender, const QJsonObject &docObj)
 
 void ChatServer::userDisconnected(ServerWorker *sender)
 {
+    // 保存登出日志
+    if (m_messageStorage && !sender->userName().isEmpty()) {
+        QString clientAddress = sender->peerAddress().toString();
+        m_messageStorage->saveLoginLog(sender->userName(), clientAddress, false);
+    }
+
     m_clients.removeAll(sender);
     const QString userName = sender->userName();
     if (!userName.isEmpty()) {
